@@ -1,0 +1,13 @@
+#include <PA9.h>       // Include for PA_Lib
+
+typedef struct {
+  int size;
+  int type;
+  double width,height;
+  double **verts;
+  double **inert;
+} body;
+
+void bodyInit(body *,s16);
+void bodyCopy(body *,const body *);
+void bodyDestruct(body **,s16 *);

@@ -1,0 +1,19 @@
+PAGfx Converter, by Mollusk     www.palib.com
+If you have suggestions, problems, or anything, please mail me at mollusk@palib.info
+
+Converting PAGfx.ini
+Transparent Color : White
+
+1 sprites :
+  Elude : 256colors, 32x64, Pal : sprite0_Pal, -> Elude_Sprite
+
+1 backgrounds :
+  map : EasyBg, 1024x1024, Pal : map_Pal, Converted to LargeMap, 55 tiles -> map_Tiles and map_Map
+
+2 palettes :
+  sprite0_Pal, 88 colors
+  map_Pal, 10 colors
+
+Converted in 00:00:02.1718750
+
+Finished !

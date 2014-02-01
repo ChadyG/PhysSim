@@ -1,0 +1,2 @@
+void drawScene();
+void renderBodies(body **,s16);

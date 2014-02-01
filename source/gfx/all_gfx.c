@@ -1,0 +1,24 @@
+//Gfx converted using Mollusk's PAGfx Converter
+
+//This file contains all the .c, for easier inclusion in a project
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+// Sprite files : 
+#include "Elude.c"
+
+// Background files : 
+#include "map.c"
+
+// Palette files : 
+#include "sprite0.pal.c"
+#include "map.pal.c"
+
+
+#ifdef __cplusplus
+}
+#endif
+

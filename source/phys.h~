@@ -1,0 +1,5 @@
+void doPhysics(body **,s16);
+void doPhysicsCircle(body *);
+void doPhysicsRectangle(body *);
+void doPhysicsTriangle(body *);
+void doPhysicsLoose(body *);

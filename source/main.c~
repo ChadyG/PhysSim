@@ -1,0 +1,290 @@
+#include <PA9.h>       // Include for PA_Lib
+#include "gfx/all_gfx.c"
+#include "gfx/all_gfx.h"
+#include "data.h"
+#include "phys.h"
+#include "render.h"
+#define MAX_BODIES 10
+#define CIRCLE 16  //vertices of our unit circle
+#define ARC 32     //ARC = 256/(CIRCLE/2)
+void doKeys();
+void drawTemp(body *,s16 *,s32 *,s32 *,double [CIRCLE][2]);
+
+s32 scrollX=0,scrollY=0;
+
+//middle is 130,100, Stylus*25
+
+int main(int argc, char ** argv) {
+  s16 i, obj_end = 0, bods = 0, drawType = 0;
+  s32 oldStyX = 0,oldStyY = 0;
+  body draw, *new, *bodies[MAX_BODIES];
+  bodyInit(&draw,100); //constructor
+
+  double circle[CIRCLE][2];
+  for (i=128;i<=384;i+=ARC) {
+    circle[(i-128)/ARC][0] = PA_Cos(i)/256.0;
+    circle[(i-128)/ARC][1] = PA_Sin(i)/256.0;
+    if (i > 128 && i <384){
+      circle[CIRCLE-(i-128)/ARC][0] = -circle[(i-128)/ARC][0];
+      circle[CIRCLE-(i-128)/ARC][1] = circle[(i-128)/ARC][1];
+    }
+  }
+
+	PA_Init();    // Initializes PA_Lib
+	PA_InitVBL(); // Initializes a standard VBL
+	PA_Init3D();
+	PA_Init3DDrawing (0,0,5,0,0,0);
+	
+	PA_EasyBgLoad(1,3,map);
+	PA_LoadSpritePal(0,0,(void*)sprite0_Pal);
+	PA_CreateSprite(0,0,(void*)Elude_Sprite,OBJ_SIZE_32X64,1,0,32,32);
+
+  PA_InitText(1, 0);
+
+	while (1) { // Infinite loop to keep the program running
+	  doKeys();
+
+    PA_OutputText(1, 1, 1, "Stylus X: %d   Y:%d  ", Stylus.X,Stylus.Y);
+    PA_OutputText(1, 1, 2, "3d X: %f   Y:%f  ", (Stylus.X-130)/25.0,(100-Stylus.Y)/25.0);
+    PA_OutputText(1, 1, 3, "obj_end %d ", obj_end);
+    PA_OutputText(1, 1, 4, "body size %d       ", bods>0?bodies[bods-1]->size:0);
+    PA_OutputText(1, 1, 5, "Draw type %s      ", drawType==0?"body":drawType==1?"square":drawType==2?"circle":"triangle");
+	  PA_EasyBgScrollXY(1,3,scrollX,scrollY);
+
+    if (Pad.Newpress.A)
+      drawType = 0;
+    if (Pad.Newpress.B)
+      drawType = 1;
+    if (Pad.Newpress.X)
+      drawType = 2;
+    if (Pad.Newpress.Y)
+      drawType = 3;
+
+    if (Pad.Newpress.Select)
+      bodyDestruct(bodies,&bods);
+
+    if (bods==MAX_BODIES) {
+      obj_end = 0;
+    }else{
+      if (Stylus.Newpress)
+        draw.type = drawType;
+
+      drawTemp(&draw,&obj_end,&oldStyX,&oldStyY,circle);
+//start function
+/*
+      if (drawType==0) {  //Free bodies----------------------
+        if (Stylus.Newpress) {
+          draw.verts[0][0] = (Stylus.X-130)/25.0;
+          draw.verts[0][1] = (100-Stylus.Y)/25.0;
+          obj_end = 1;
+
+          oldStyX = Stylus.X;
+          oldStyY = Stylus.Y;
+        }
+        if (obj_end>0 && obj_end<draw.size && Stylus.Held &&
+            (Stylus.X - oldStyX)*(Stylus.X - oldStyX) > 4 &&
+            (Stylus.Y - oldStyY)*(Stylus.Y - oldStyY) > 4) {
+          draw.verts[obj_end][0] = (Stylus.X-130)/25.0;
+          draw.verts[obj_end][1] = (100-Stylus.Y)/25.0;
+          obj_end++;
+
+          oldStyX = Stylus.X;
+          oldStyY = Stylus.Y;
+        }
+      }
+      if (drawType==1) {  //Rectangles----------------------
+        if (Stylus.Newpress) {
+          draw.verts[0][0] = (Stylus.X-130)/25.0;
+          draw.verts[0][1] = (100-Stylus.Y)/25.0;
+
+          draw.verts[1][1] = (100-Stylus.Y)/25.0;
+
+
+          draw.verts[3][0] = (Stylus.X-130)/25.0;
+
+          obj_end = 4;
+        }
+        if (Stylus.Held) {
+          draw.width = (Stylus.X-130)/25.0 - draw.verts[0][0];
+          draw.height = (100-Stylus.Y)/25.0 - draw.verts[0][1];
+          draw.width = draw.width>1.5?1.5:draw.width<-1.5?-1.5:draw.width;
+          draw.height = draw.height>1.5?1.5:draw.height<-1.5?-1.5:draw.height;
+
+
+          draw.verts[1][0] = draw.width + draw.verts[0][0];
+
+          draw.verts[2][0] = draw.width + draw.verts[0][0];
+          draw.verts[2][1] = draw.height + draw.verts[0][1];
+
+          draw.verts[3][1] = draw.height + draw.verts[0][1];
+        }
+      }
+      if (drawType==2) { // Circles------------------------
+        if (Stylus.Newpress) {
+          oldStyX = Stylus.X;
+          oldStyY = Stylus.Y;
+          obj_end = CIRCLE;
+        }
+        if (Stylus.Held) {
+          draw.width = PA_TrueDistance(Stylus.X,Stylus.Y,oldStyX,oldStyY)/25.0;
+          draw.width = draw.width>1.5?1.5:draw.width;
+          for (i=0;i<obj_end;i++) {
+            draw.verts[i][0] = (oldStyX-130)/25.0 + circle[i][0]*draw.width;
+            draw.verts[i][1] = (100-oldStyY)/25.0 + circle[i][1]*draw.width;
+          }
+        }
+      }
+      if (drawType==3) { // Triangles------------------------
+        if (Stylus.Newpress) {
+          oldStyX = Stylus.X;
+          oldStyY = Stylus.Y;
+          obj_end = 3;
+        }
+        if (Stylus.Held) {
+          draw.width = ((Stylus.X-130)/25.0 - (oldStyX-130)/25.0);
+          draw.height = ((100-Stylus.Y)/25.0 - (100-oldStyY)/25.0);
+          draw.width = draw.width>1.5?1.5:draw.width<-1.5?-1.5:draw.width;
+          draw.height = draw.height>1.5?1.5:draw.height<-1.5?-1.5:draw.height;
+
+          draw.verts[0][0] = (Stylus.X-130)/25.0;
+          draw.verts[0][1] = (100-Stylus.Y)/25.0;
+          draw.verts[1][0] = (oldStyX-130)/25.0 - draw.height;
+          draw.verts[1][1] = (100-oldStyY)/25.0 + draw.width;
+          draw.verts[2][0] = (oldStyX-130)/25.0 + draw.height;
+          draw.verts[2][1] = (100-oldStyY)/25.0 - draw.width;
+        }
+      }
+
+*/
+//end function
+      if (!Stylus.Held && obj_end>0) {  //Add to our Hash table-----
+        new = malloc(sizeof(body));
+        bodyInit(new,obj_end);
+        bodyCopy(new,&draw);
+        bodies[bods] = new;
+        bods++;
+        obj_end = 0;
+      }
+    }
+
+    if (bods>0)  doPhysics(bodies,bods); //Run Physics calculations
+
+
+		PA_WaitForVBL(); //now we can start doing GL stuff
+		
+    drawScene();  //background
+    if (bods>0) renderBodies(bodies,bods);
+
+		glPushMatrix();  //draw the temporary shape
+    glBegin(GL_TRIANGLES);
+
+    glColor3b(200,200,50);
+    for (i=0;i<obj_end-2;i++) {
+      PA_Vertex3D(draw.verts[i][0],draw.verts[i][1],0);
+      PA_Vertex3D(draw.verts[i+1][0],draw.verts[i+1][1],0);
+      PA_Vertex3D(draw.verts[i+2][0],draw.verts[i+2][1],0);
+    }
+    if (obj_end>1) {
+      PA_Vertex3D(draw.verts[obj_end-2][0],draw.verts[obj_end-2][1],0);
+      PA_Vertex3D(draw.verts[obj_end-1][0],draw.verts[obj_end-1][1],0);
+      PA_Vertex3D(draw.verts[0][0],draw.verts[0][1],0);
+    }
+
+    glEnd();
+		glPopMatrix(1); //end of temporary shape
+		glFlush();
+	}
+	
+	return 0;
+} // End of main()
+//---Scrolling---
+void doKeys() {  
+  scrollX += (Pad.Held.Right - Pad.Held.Left)*4.0;
+	scrollY += (Pad.Held.Down - Pad.Held.Up)*4.0;
+}
+
+void drawTemp(body *draw,s16 *obj_end,s32 *oldStyX,s32 *oldStyY,double circle[CIRCLE][2]) {
+  s16 i;
+  if (draw->type==0) {  //Free bodies----------------------
+    if (Stylus.Newpress) {
+      draw->verts[0][0] = (Stylus.X-130)/25.0;
+      draw->verts[0][1] = (100-Stylus.Y)/25.0;
+      *obj_end = 1;
+
+      *oldStyX = Stylus.X;
+      *oldStyY = Stylus.Y;
+   }
+    if (*obj_end>0 && *obj_end<draw->size && Stylus.Held &&
+        (Stylus.X - *oldStyX)*(Stylus.X - *oldStyX) > 4 &&
+        (Stylus.Y - *oldStyY)*(Stylus.Y - *oldStyY) > 4) {
+      draw->verts[*obj_end][0] = (Stylus.X-130)/25.0;
+      draw->verts[*obj_end][1] = (100-Stylus.Y)/25.0;
+      *obj_end = *obj_end+1;
+
+      *oldStyX = Stylus.X;
+      *oldStyY = Stylus.Y;
+    }
+  }
+  if (draw->type==1) {  //Rectangles----------------------
+    if (Stylus.Newpress) {
+      draw->verts[0][0] = (Stylus.X-130)/25.0;
+      draw->verts[0][1] = (100-Stylus.Y)/25.0;
+
+      draw->verts[1][1] = (100-Stylus.Y)/25.0;
+
+
+      draw->verts[3][0] = (Stylus.X-130)/25.0;
+
+      *obj_end = 4;
+    }
+    if (Stylus.Held) {
+      draw->width = (Stylus.X-130)/25.0 - draw->verts[0][0];
+      draw->height = (100-Stylus.Y)/25.0 - draw->verts[0][1];
+      draw->width = draw->width>1.5?1.5:draw->width<-1.5?-1.5:draw->width;
+      draw->height = draw->height>1.5?1.5:draw->height<-1.5?-1.5:draw->height;
+
+
+      draw->verts[1][0] = draw->width + draw->verts[0][0];
+
+      draw->verts[2][0] = draw->width + draw->verts[0][0];
+      draw->verts[2][1] = draw->height + draw->verts[0][1];
+
+      draw->verts[3][1] = draw->height + draw->verts[0][1];
+    }
+  }
+  if (draw->type==2) { // Circles------------------------
+    if (Stylus.Newpress) {
+      *oldStyX = Stylus.X;
+      *oldStyY = Stylus.Y;
+      *obj_end = CIRCLE;
+     }
+    if (Stylus.Held) {
+      draw->width = PA_TrueDistance(Stylus.X,Stylus.Y,*oldStyX,*oldStyY)/25.0;
+      draw->width = draw->width>1.5?1.5:draw->width;
+      for (i=0;i<*obj_end;i++) {
+        draw->verts[i][0] = (*oldStyX-130)/25.0 + circle[i][0]*draw->width;
+        draw->verts[i][1] = (100-*oldStyY)/25.0 + circle[i][1]*draw->width;
+      }
+    }
+  }
+  if (draw->type==3) { // Triangles------------------------
+    if (Stylus.Newpress) {
+      *oldStyX = Stylus.X;
+      *oldStyY = Stylus.Y;
+      *obj_end = 3;
+    }
+    if (Stylus.Held) {
+      draw->width = ((Stylus.X-130)/25.0 - (*oldStyX-130)/25.0);
+      draw->height = ((100-Stylus.Y)/25.0 - (100-*oldStyY)/25.0);
+      draw->width = draw->width>1.5?1.5:draw->width<-1.5?-1.5:draw->width;
+      draw->height = draw->height>1.5?1.5:draw->height<-1.5?-1.5:draw->height;
+
+      draw->verts[0][0] = (Stylus.X-130)/25.0;
+      draw->verts[0][1] = (100-Stylus.Y)/25.0;
+      draw->verts[1][0] = (*oldStyX-130)/25.0 - draw->height;
+      draw->verts[1][1] = (100-*oldStyY)/25.0 + draw->width;
+      draw->verts[2][0] = (*oldStyX-130)/25.0 + draw->height;
+      draw->verts[2][1] = (100-*oldStyY)/25.0 - draw->width;
+    }
+  }
+}

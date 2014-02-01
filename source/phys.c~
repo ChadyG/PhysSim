@@ -1,0 +1,66 @@
+#include <PA9.h>       // Include for PA_Lib
+#include "data.h"#include "phys.h"
+
+//---Run Physics calculations on Hash Table---
+void doPhysics(body *b[],s16 s) {
+  s16 i,j;
+  double lowest = 0,dx,dy;
+
+  for (j=0;j<s;j++) {
+    lowest = b[j]->verts[0][1];
+    if (b[j]->type==2) {
+      for (i=0;i<s;i++) {
+        if (i!=j) {
+          dx = b[j]->verts[0][0] - b[i]->verts[0][0];
+          dy = (b[j]->verts[0][1]-b[j]->width) - (b[i]->verts[0][1]-b[i]->width);
+          if ((dx*dx+dy*dy) < (b[j]->width+b[i]->width)*(b[j]->width+b[i]->width)) {
+            b[j]->inert[0][0] = dx*.1;
+            b[j]->inert[0][1] = dy*.1;
+          }
+        }
+      }
+
+      lowest = b[j]->verts[0][1] - (b[j]->width)*2;
+    }else
+    for (i=1;i<(b[j]->size);i++) {
+      if (lowest >  b[j]->verts[i][1])
+        lowest = b[j]->verts[i][1];
+    }
+    if (lowest > -3) 
+      b[j]->inert[0][1] -= .025;
+    else if ((b[j]->inert[0][1])<0)
+      b[j]->inert[0][1] = -.75*(b[j]->inert[0][1]);
+
+    if (lowest>-3.05 && lowest<-2.95) {
+      b[j]->inert[0][0] *= .9;
+      if ((b[j]->inert[0][0])>-.05 && (b[j]->inert[0][0])<.05)
+        b[j]->inert[0][0] = 0;
+      if ((b[j]->inert[0][1])>-.05 && (b[j]->inert[0][1])<.05)
+        b[j]->inert[0][1] = 0;
+    }
+
+    if (b[j]->verts[0][0] < -5 || b[j]->verts[0][0] > 5)
+      b[j]->inert[0][0] = -.75*(b[j]->inert[0][0]);
+
+    for (i=0;i<(b[j]->size);i++) {
+      b[j]->verts[i][1] += (b[j]->inert[0][1]);
+      b[j]->verts[i][0] += (b[j]->inert[0][0]);
+    }
+  }
+}
+//---Run Loose Physics calculations on Hash Table---
+void doPhysicsLoose(body *b) {
+  s16 i;
+  for (i=0;i<b->size;i++) {
+    if (b->verts[i][1] > -3) 
+      b->inert[i][1] -= .025;
+    else if (b->inert[i][1]<0)
+      b->inert[i][1] = -.75*(b->inert[i][1]);
+
+    if (b->inert[i][1]>-.05 && b->inert[i][1]<.05 &&
+        b->verts[i][1]>-3.05 && b->verts[i][1]<-2.95)
+      b->inert[i][1] = 0;
+
+    b->verts[i][1] += b->inert[i][1];
+  }
+}
